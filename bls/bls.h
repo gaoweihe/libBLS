@@ -89,6 +89,8 @@ public:
 
     libff::alt_bn128_G1 SignatureRecover( const std::vector< libff::alt_bn128_G1 >& shares,
         const std::vector< libff::alt_bn128_Fr >& coeffs );
+    libff::alt_bn128_G1 ParallelSignatureRecover( const std::vector< libff::alt_bn128_G1 >& shares,
+        const std::vector< libff::alt_bn128_Fr >& coeffs );
 
     static libff::alt_bn128_G1 PopProve( const libff::alt_bn128_Fr& secret_key );
 

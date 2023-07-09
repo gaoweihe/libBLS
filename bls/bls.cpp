@@ -30,6 +30,9 @@ along with libBLS.  If not, see <https://www.gnu.org/licenses/>.
 #include <ctime>
 #include <stdexcept>
 #include <thread>
+#include <tbb/parallel_for.h>
+#include <tbb/blocked_range.h>
+#include <mutex>
 
 #include <boost/multiprecision/cpp_int.hpp>
 #include <libff/algebra/curves/alt_bn128/alt_bn128_pairing.hpp>
@@ -374,6 +377,32 @@ libff::alt_bn128_G1 Bls::SignatureRecover( const std::vector< libff::alt_bn128_G
         sign = sign + coeffs[i] * shares[i];  // signature recovering using Lagrange Coefficients
     }
 
+    return sign;  // first element is hash of a receiving message
+}
+
+libff::alt_bn128_G1 Bls::ParallelSignatureRecover( const std::vector< libff::alt_bn128_G1 >& shares,
+    const std::vector< libff::alt_bn128_Fr >& coeffs ) {
+    if ( shares.size() < this->t_ || coeffs.size() < this->t_ ) {
+        throw ThresholdUtils::IncorrectInput( "not enough participants in the threshold group" );
+    }
+
+    libff::alt_bn128_G1 sign = libff::alt_bn128_G1::zero();
+    std::vector< libff::alt_bn128_G1 > intermediate( this->t_ );
+
+    tbb::parallel_for(tbb::blocked_range<size_t>(0, this->t_), [&](const tbb::blocked_range<size_t>& r) {
+        for (size_t i = r.begin(); i != r.end(); ++i) {
+            if ( !shares[i].is_well_formed() ) {
+                throw ThresholdUtils::IsNotWellFormed( "incorrect input data to recover signature" );
+            }
+
+            intermediate[i] = coeffs[i] * shares[i];
+        }
+    });
+
+    for ( size_t i = 0; i < this->t_; ++i ) {
+        sign = sign + intermediate[i];  // signature recovering using Lagrange Coefficients
+    }
+    
     return sign;  // first element is hash of a receiving message
 }
 

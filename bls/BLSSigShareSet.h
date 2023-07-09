@@ -45,7 +45,7 @@ public:
 
     unsigned long getTotalSigSharesCount();
     std::shared_ptr< BLSSigShare > getSigShareByIndex( size_t _index );
-    std::shared_ptr< BLSSignature > merge();
+    std::shared_ptr< BLSSignature > merge(size_t n_threads = 0);
 };
 
 

@@ -73,7 +73,7 @@ bool BLSSigShareSet::isEnough() {
     return ( sigShares.size() >= requiredSigners );
 }
 
-std::shared_ptr< BLSSignature > BLSSigShareSet::merge() {
+std::shared_ptr< BLSSignature > BLSSigShareSet::merge(size_t n_threads) {
     if ( !isEnough() )
         throw libBLS::ThresholdUtils::IncorrectInput( "Not enough shares to create signature" );
 
@@ -91,7 +91,15 @@ std::shared_ptr< BLSSignature > BLSSigShareSet::merge() {
     std::vector< libff::alt_bn128_Fr > lagrangeCoeffs =
         libBLS::ThresholdUtils::LagrangeCoeffs( participatingNodes, requiredSigners );
 
-    libff::alt_bn128_G1 signature = obj.SignatureRecover( shares, lagrangeCoeffs );
+    libff::alt_bn128_G1 signature; 
+    if (n_threads != 0)
+    {
+        signature = obj.ParallelSignatureRecover( shares, lagrangeCoeffs );
+    }
+    else
+    {
+        signature = obj.SignatureRecover( shares, lagrangeCoeffs );
+    }
 
     auto sigPtr = std::make_shared< libff::alt_bn128_G1 >( signature );
 
