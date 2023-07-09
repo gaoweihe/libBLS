@@ -241,6 +241,7 @@ fi
 
 WITH_FF="yes"
 WITH_GMP="yes"
+WITH_ONETBB="yes"
 
 if [ -z "${PARALLEL_COUNT}" ];
 then
@@ -716,6 +717,21 @@ then
 	else
 		echo -e "${COLOR_SUCCESS}SKIPPED${COLOR_RESET}"
 	fi
+fi
+
+if [ "$WITH_ONETBB" = "yes" ];
+then
+	echo -e "${COLOR_SEPARATOR}==================== ${COLOR_PROJECT_NAME}ONETBB${COLOR_SEPARATOR} ==========================================${COLOR_RESET}"
+	echo -e "${COLOR_INFO}downloading it${COLOR_DOTS}...${COLOR_RESET}"
+	eval git clone https://github.com/oneapi-src/oneTBB.git
+	eval cd oneTBB
+	eval git pull
+	eval git checkout a00cc3b8b5fb4d8115e9de56bf713157073ed68c
+	eval mkdir -p build && cd build
+	eval cmake -DCMAKE_INSTALL_PREFIX=$INSTALL_ROOT -DTBB_TEST=OFF ..
+	eval cmake --build . --config relwithdebinfo
+	eval cmake --install . --config relwithdebinfo
+	eval .. 
 fi
 
 if [ "$WITH_GMP" = "yes" ];
