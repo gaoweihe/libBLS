@@ -388,9 +388,8 @@ libff::alt_bn128_G1 Bls::ParallelSignatureRecover( const std::vector< libff::alt
     }
 
     libff::alt_bn128_G1 sign = libff::alt_bn128_G1::zero();
-    // std::vector< libff::alt_bn128_G1 > intermediate( this->t_ );
-    oneapi::tbb::concurrent_vector< libff::alt_bn128_G1 > intermediate;
-    // intermediate.grow_to_at_least( this->t_ );
+    std::vector< libff::alt_bn128_G1 > intermediate( this->t_ );
+    // oneapi::tbb::concurrent_vector< libff::alt_bn128_G1 > intermediate;
 
     std::vector<std::thread> t_vec;
     const size_t item_per_thread = this->t_ / num_threads;
@@ -403,7 +402,7 @@ libff::alt_bn128_G1 Bls::ParallelSignatureRecover( const std::vector< libff::alt
                     throw ThresholdUtils::IsNotWellFormed( "incorrect input data to recover signature" );
                 }
 
-                intermediate.push_back(coeffs[i] * shares[i]);
+                intermediate[i] = coeffs[i] * shares[i];
             }
         }, i * item_per_thread, (i + 1) * item_per_thread));
     }
