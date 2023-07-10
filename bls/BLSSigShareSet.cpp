@@ -92,9 +92,9 @@ std::shared_ptr< BLSSignature > BLSSigShareSet::merge(size_t n_threads) {
         libBLS::ThresholdUtils::LagrangeCoeffs( participatingNodes, requiredSigners );
 
     libff::alt_bn128_G1 signature; 
-    if (n_threads != 0)
+    if (n_threads >= 2)
     {
-        signature = obj.ParallelSignatureRecover( shares, lagrangeCoeffs );
+        signature = obj.ParallelSignatureRecover( shares, lagrangeCoeffs, n_threads );
     }
     else
     {

@@ -382,7 +382,7 @@ libff::alt_bn128_G1 Bls::SignatureRecover( const std::vector< libff::alt_bn128_G
 }
 
 libff::alt_bn128_G1 Bls::ParallelSignatureRecover( const std::vector< libff::alt_bn128_G1 >& shares,
-    const std::vector< libff::alt_bn128_Fr >& coeffs ) {
+    const std::vector< libff::alt_bn128_Fr >& coeffs, const size_t num_threads ) {
     if ( shares.size() < this->t_ || coeffs.size() < this->t_ ) {
         throw ThresholdUtils::IncorrectInput( "not enough participants in the threshold group" );
     }
@@ -392,15 +392,36 @@ libff::alt_bn128_G1 Bls::ParallelSignatureRecover( const std::vector< libff::alt
     oneapi::tbb::concurrent_vector< libff::alt_bn128_G1 > intermediate;
     // intermediate.grow_to_at_least( this->t_ );
 
-    oneapi::tbb::parallel_for(oneapi::tbb::blocked_range<size_t>(0, this->t_), [&](const oneapi::tbb::blocked_range<size_t>& r) {
-        for (size_t i = r.begin(); i != r.end(); ++i) {
-            if ( !shares[i].is_well_formed() ) {
-                throw ThresholdUtils::IsNotWellFormed( "incorrect input data to recover signature" );
-            }
+    std::vector<std::thread> t_vec;
+    const size_t item_per_thread = this->t_ / num_threads;
+    for (size_t i = 0; i < num_threads; i++)
+    {
+        // split task into threads
+        t_vec.emplace_back(std::thread([&](const size_t start, const size_t end) {
+            for (size_t i = start; i < end; ++i) {
+                if ( !shares[i].is_well_formed() ) {
+                    throw ThresholdUtils::IsNotWellFormed( "incorrect input data to recover signature" );
+                }
 
-            intermediate.push_back(coeffs[i] * shares[i]);
-        }
-    });
+                intermediate.push_back(coeffs[i] * shares[i]);
+            }
+        }, i * item_per_thread, (i + 1) * item_per_thread));
+    }
+    
+    // join threads
+    for (auto& t : t_vec) {
+        t.join();
+    }
+    
+    // oneapi::tbb::parallel_for(oneapi::tbb::blocked_range<size_t>(0, this->t_), [&](const oneapi::tbb::blocked_range<size_t>& r) {
+    //     for (size_t i = r.begin(); i != r.end(); ++i) {
+    //         if ( !shares[i].is_well_formed() ) {
+    //             throw ThresholdUtils::IsNotWellFormed( "incorrect input data to recover signature" );
+    //         }
+
+    //         intermediate.push_back(coeffs[i] * shares[i]);
+    //     }
+    // });
 
     for ( size_t i = 0; i < this->t_; ++i ) {
         sign = sign + intermediate[i];  // signature recovering using Lagrange Coefficients
