@@ -30,8 +30,8 @@ along with libBLS.  If not, see <https://www.gnu.org/licenses/>.
 #include <ctime>
 #include <stdexcept>
 #include <thread>
-#include <tbb/parallel_for.h>
-#include <tbb/blocked_range.h>
+#include "oneapi/tbb/parallel_for.h"
+#include "oneapi/tbb/blocked_range.h"
 #include <mutex>
 
 #include <boost/multiprecision/cpp_int.hpp>
@@ -388,8 +388,9 @@ libff::alt_bn128_G1 Bls::ParallelSignatureRecover( const std::vector< libff::alt
 
     libff::alt_bn128_G1 sign = libff::alt_bn128_G1::zero();
     std::vector< libff::alt_bn128_G1 > intermediate( this->t_ );
+    
 
-    tbb::parallel_for(tbb::blocked_range<size_t>(0, this->t_), [&](const tbb::blocked_range<size_t>& r) {
+    oneapi::tbb::parallel_for(oneapi::tbb::blocked_range<size_t>(0, this->t_), [&](const oneapi::tbb::blocked_range<size_t>& r) {
         for (size_t i = r.begin(); i != r.end(); ++i) {
             if ( !shares[i].is_well_formed() ) {
                 throw ThresholdUtils::IsNotWellFormed( "incorrect input data to recover signature" );
