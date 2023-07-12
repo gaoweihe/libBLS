@@ -30,10 +30,8 @@ along with libBLS.  If not, see <https://www.gnu.org/licenses/>.
 #include <ctime>
 #include <stdexcept>
 #include <thread>
-#include "oneapi/tbb/concurrent_vector.h"
-#include "oneapi/tbb/parallel_for.h"
+#include "oneapi/tbb/parallel_reduce.h"
 #include "oneapi/tbb/blocked_range.h"
-#include <mutex>
 
 #include <boost/multiprecision/cpp_int.hpp>
 #include <libff/algebra/curves/alt_bn128/alt_bn128_pairing.hpp>
@@ -387,9 +385,8 @@ libff::alt_bn128_G1 Bls::ParallelSignatureRecover( const std::vector< libff::alt
         throw ThresholdUtils::IncorrectInput( "not enough participants in the threshold group" );
     }
 
-    libff::alt_bn128_G1 sign = libff::alt_bn128_G1::zero();
+    // libff::alt_bn128_G1 sign = libff::alt_bn128_G1::zero();
     std::vector< libff::alt_bn128_G1 > intermediate( this->t_ );
-    // oneapi::tbb::concurrent_vector< libff::alt_bn128_G1 > intermediate;
 
     std::vector<std::thread> t_vec;
     const size_t item_per_thread = this->t_ / num_threads;
@@ -411,20 +408,21 @@ libff::alt_bn128_G1 Bls::ParallelSignatureRecover( const std::vector< libff::alt
     for (auto& t : t_vec) {
         t.join();
     }
+
+    libff::alt_bn128_G1 sign = oneapi::tbb::parallel_reduce(
+        oneapi::tbb::blocked_range<std::vector<libff::alt_bn128_G1>::iterator>(intermediate.begin(), intermediate.end()),
+        libff::alt_bn128_G1::zero(),
+        [](const oneapi::tbb::blocked_range<std::vector<libff::alt_bn128_G1>::iterator>& range, libff::alt_bn128_G1 partialSum) {
+            for (auto it = range.begin(); it != range.end(); ++it) {
+                partialSum = partialSum + *it;
+            }
+            return partialSum;
+        },
+        [](libff::alt_bn128_G1 a, libff::alt_bn128_G1 b) {
+            return a + b;
+        }
+    );
     
-    // oneapi::tbb::parallel_for(oneapi::tbb::blocked_range<size_t>(0, this->t_), [&](const oneapi::tbb::blocked_range<size_t>& r) {
-    //     for (size_t i = r.begin(); i != r.end(); ++i) {
-    //         if ( !shares[i].is_well_formed() ) {
-    //             throw ThresholdUtils::IsNotWellFormed( "incorrect input data to recover signature" );
-    //         }
-
-    //         intermediate.push_back(coeffs[i] * shares[i]);
-    //     }
-    // });
-
-    for ( size_t i = 0; i < this->t_; ++i ) {
-        sign = sign + intermediate[i];  // signature recovering using Lagrange Coefficients
-    }
     
     return sign;  // first element is hash of a receiving message
 }

@@ -1,8 +1,23 @@
 cmake_minimum_required(VERSION 3.5.1)
 
 set( CMAKE_CXX_STANDARD 17 )
+set( CMAKE_CXX_STANDARD_REQUIRED ON )
 
 project(libBLS)
+
+find_package(Threads REQUIRED)
+
+## fetch dependencies with FetchContent
+include(FetchContent)
+set(FETCHCONTENT_QUIET OFF)
+# oneTBB
+FetchContent_Declare(
+    oneTBB
+    GIT_REPOSITORY https://github.com/oneapi-src/oneTBB.git
+    GIT_TAG v2021.9.0
+)
+FetchContent_MakeAvailable(oneTBB)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/build/_deps/onetbb-src/include)
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 7.0)
@@ -176,7 +191,7 @@ set(BLS_INCLUDE_DIRS
 		)
 
 target_include_directories(bls PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(bls PRIVATE ff ${CRYPTOPP_LIBRARY} ${GMPXX_LIBRARY} ${GMP_LIBRARY} tbb pthread)
+target_link_libraries(bls PRIVATE ff ${CRYPTOPP_LIBRARY} ${GMPXX_LIBRARY} ${GMP_LIBRARY} TBB::tbb pthread Threads::Threads)
 
 add_subdirectory(threshold_encryption)
 
